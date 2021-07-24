@@ -5,6 +5,7 @@
 *.ear
 *.nar
 hs_err_pid*
+user.json
 
 out/
 .idea/

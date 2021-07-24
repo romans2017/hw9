@@ -1,48 +1,111 @@
 package ua.goit.hw9Stream;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.regex.Pattern;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
+import java.io.*;
+import java.util.*;
 
 public class ReadWriteFile {
 
-    public static ArrayList<String> readFromFileToArray(String filePath) throws IOException {
+    static class User {
+        private final String name;
+        private final int age;
+
+        public User(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+    public static List<String> readFromFileToList(String filePath, String delimiter) throws IOException {
         String nextLine;
-        ArrayList<String> words = new ArrayList<>();
+        List<String> words = new ArrayList<>();
         try (FileReader fileReader = new FileReader(filePath)) {
-            BufferedReader bufferedReader = new BufferedReader(fileReader);
-            while ((nextLine = bufferedReader.readLine()) != null) {
-                String[] normalizedLines = nextLine.split("\\s+");
-                for (String line: normalizedLines) {
-                    words.add(line);
+            Scanner scanner = new Scanner(fileReader);
+            scanner.useDelimiter(delimiter);
+            while (scanner.hasNext()) {
+                nextLine = scanner.next();
+                words.add(nextLine);
+            }
+        }
+        return words;
+    }
+
+    public static List<User> readFromFileToListObjects(String filePath) throws IOException, NumberFormatException {
+        String nextLine;
+        List<User> words = new ArrayList<>();
+        try (FileReader fileReader = new FileReader(filePath)) {
+            Scanner scanner = new Scanner(fileReader);
+            scanner.nextLine();
+            while (scanner.hasNextLine()) {
+                nextLine = scanner.nextLine();
+                if (!"".equals(nextLine)) {
+                    String[] splitWords = nextLine.split("\\s+");
+                    words.add(new User(splitWords[0], Integer.parseInt(splitWords[1])));
                 }
             }
         }
         return words;
     }
 
-    public static void printValidPhones(ArrayList<String> words) {
-        for (String word: words) {
-            if (word.matches("\\(d{3}\\)\\sd{3}-d{4}") || word.matches("d{3}-d{3}-d{4}")) {
-                System.out.println(word);
+    public static void output(String toOutput, Outputs destination, String outputFileName) throws FileNotFoundException, IllegalArgumentException {
+        PrintStream current = System.out;
+        PrintStream printStream = null;
+        if (destination == Outputs.FILE) {
+            if (outputFileName == null || "".equals(outputFileName.strip())) {
+                throw new IllegalArgumentException("Output file name not specified");
             }
+            printStream = new PrintStream(".\\src\\main\\resources\\" + outputFileName);
+            System.setOut(printStream);
+        } else if (destination == Outputs.CONSOLE) {
+            System.setOut(current);
+        }
+        System.out.print(toOutput);
+        System.setOut(current);
+        if (printStream != null) {
+            printStream.close();
         }
     }
 
-    /**
-     *
-     * @param words ArrayList of String. Elements with even indexes are keys of JSON entry.
-     *              Elements with odd indexes are values of JSON entry
-     */
-    public static void toJson(ArrayList<String> words) {
-        for (int i = 0; i < words.size(); i++) {
-
+    public static String getValidPhones(List<String> words) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String word : words) {
+            if (word.matches("^\\(\\d{3}\\)\\s\\d{3}-\\d{4}$") || word.matches("^\\d{3}-\\d{3}-\\d{4}$")) {
+                stringBuilder.append(word);
+                stringBuilder.append("\n");
+            }
         }
+        return stringBuilder.toString();
+    }
+
+    public static String getJson(List<User> words) throws IllegalArgumentException {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(words) + "\n";
+    }
+
+    public static String getNumberRepeats(List<String> words) {
+
+        Map<String, Integer> map = new HashMap<>();
+        for (String word : words) {
+            if (map.containsKey(word)) {
+                map.put(word, map.get(word) + 1);
+            } else {
+                map.put(word, 1);
+            }
+        }
+        List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
+        list.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Map.Entry<String, Integer> entry : list) {
+            stringBuilder.append(entry.getKey());
+            stringBuilder.append(" ");
+            stringBuilder.append(entry.getValue().toString());
+            stringBuilder.append("\n");
+        }
+
+        return stringBuilder.toString();
     }
 
 }
